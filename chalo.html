@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech to Text Converter with Braille Support</title>
+    <link rel="icon" type="image/png" href="favicon.png" sizes="16x16">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f7fafc;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 50px 20px;
+        }
+
+        h1 {
+            color: #4a90e2;
+            margin-bottom: 30px;
+            font-size: 2.8em;
+            text-transform: uppercase;
+        }
+
+        button {
+            background-color: #4a90e2;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            margin: 15px;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #007bff;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        #result-text, #braille-output {
+            width: 90%;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            background-color: #f8f9fa;
+            font-size: 16px;
+            resize: none;
+            min-height: 150px;
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        select, input[type="file"] {
+            padding: 12px;
+            font-size: 16px;
+            margin: 15px 0;
+            border: 1px solid #ccc;
+            border-radius: 50px;
+            max-width: 250px;
+            background-color: #fff;
+            transition: background-color 0.3s ease;
+        }
+
+        select:hover, input[type="file"]:hover {
+            background-color: #eef2f7;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 18px;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .buttons-container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .icon {
+            margin-right: 10px;
+        }
+
+        .background-gradient {
+            background: linear-gradient(135deg, #4a90e2 40%, #00bcd4 100%);
+            padding: 50px 0;
+        }
+
+        h2 {
+            margin-top: 30px;
+            font-size: 24px;
+            color: #007bff;
+        }
+
+        .upload-label {
+            background-color: #00bcd4;
+            padding: 10px;
+            border-radius: 50px;
+            display: inline-block;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        .upload-label:hover {
+            background-color: #00a4b2;
+        }
+
+        #audio-upload {
+            display: none; /* Hide default input */
+        }
+
+        body.dark-mode {
+            background-color: #121212;
+            color: #ffffff;
+        }
+
+        body.dark-mode .container {
+            background-color: #1e1e1e;
+            color: #ffffff;
+        }
+
+        body.dark-mode textarea {
+            background-color: #2d2d2d;
+            color: #ffffff;
+            border-color: #444;
+        }
+
+        canvas {
+            margin-top: 20px;
+            background-color: #f8f9fa;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="background-gradient">
+        <div class="container">
+            <h1><i class="fas fa-microphone icon"></i>Speech to Text Converter</h1>
+
+            <div class="buttons-container">
+                <button id="start-btn"><i class="fas fa-play icon"></i>Start Recording</button>
+                <button id="stop-btn" disabled><i class="fas fa-stop icon"></i>Stop Recording</button>
+                <button id="pause-btn" disabled><i class="fas fa-pause icon"></i>Pause</button>
+                <button id="resume-btn" disabled><i class="fas fa-play icon"></i>Resume</button>
+            </div>
+
+            <label for="language"><i class="fas fa-globe icon"></i>Select Language:</label>
+            <select id="language">
+                <option value="en-US">English (United States)</option>
+                <option value="hi-IN">Hindi (India)</option>
+                <option value="ur-IN">Urdu (India) - اردو</option>
+                <option value="bn-IN">Bengali (India) - বাংলা</option>
+                <option value="gu-IN">Gujarati (India) - ગુજરાતી</option>
+                <option value="mr-IN">Marathi (Maharashtra) - मराठी</option>
+                <option value="pa-IN">Punjabi (India) - ਪੰਜਾਬੀ</option>
+            </select>
+
+            <h2><i class="fas fa-file-alt icon"></i>Transcribed Text:</h2>
+            <textarea id="result-text" rows="10" cols="100" readonly></textarea>
+
+            <h2><i class="fas fa-braille icon"></i>Braille Output:</h2>
+            <textarea id="braille-output" rows="10" cols="100" readonly></textarea>
+
+            <div class="buttons-container">
+                <button id="print-btn"><i class="fas fa-print icon"></i>Print</button>
+                <button id="clear-btn"><i class="fas fa-eraser icon"></i>Clear Text</button>
+                <button id="convert-to-braille-btn"><i class="fas fa-braille icon"></i>Convert to Braille</button>
+                <button id="copy-text-btn"><i class="fas fa-copy icon"></i>Copy Text</button>
+                <button id="copy-braille-btn"><i class="fas fa-copy icon"></i>Copy Braille</button>
+                <button id="download-text-btn"><i class="fas fa-download icon"></i>Download Text</button>
+                <button id="download-braille-btn"><i class="fas fa-download icon"></i>Download Braille</button>
+                <button id="listen-btn"><i class="fas fa-volume-up icon"></i>Listen</button>
+                <button id="dark-mode-toggle"><i class="fas fa-moon icon"></i>Dark Mode</button>
+                <button id="undo-btn"><i class="fas fa-undo icon"></i>Undo</button>
+                <button id="redo-btn"><i class="fas fa-redo icon"></i>Redo</button>
+            </div>
+
+            <p>Word Count: <span id="word-count">0</span></p>
+            <p>Character Count: <span id="char-count">0</span></p>
+
+            <canvas id="audio-visualizer" width="800" height="100"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+
+        const startBtn = document.getElementById('start-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+        const resumeBtn = document.getElementById('resume-btn');
+        const resultText = document.getElementById('result-text');
+        const brailleOutput = document.getElementById('braille-output');
+        const languageSelect = document.getElementById('language');
+        const printBtn = document.getElementById('print-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const convertToBrailleBtn = document.getElementById('convert-to-braille-btn');
+        const copyTextBtn = document.getElementById('copy-text-btn');
+        const copyBrailleBtn = document.getElementById('copy-braille-btn');
+        const downloadTextBtn = document.getElementById('download-text-btn');
+        const downloadBrailleBtn = document.getElementById('download-braille-btn');
+        const listenBtn = document.getElementById('listen-btn');
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        const undoBtn = document.getElementById('undo-btn');
+        const redoBtn = document.getElementById('redo-btn');
+        const wordCount = document.getElementById('word-count');
+        const charCount = document.getElementById('char-count');
+
+        recognition.lang = 'en-US';
+        recognition.interimResults = false;
+        recognition.continuous = false;
+
+        // Braille Conversion Logic
+        const brailleMap = {
+            'a': '⠁', 'b': '⠃', 'c': '⠉', 'd': '⠙', 'e': '⠑',
+            'f': '⠋', 'g': '⠛', 'h': '⠓', 'i': '⠊', 'j': '⠚',
+            'k': '⠅', 'l': '⠇', 'm': '⠍', 'n': '⠝', 'o': '⠕',
+            'p': '⠏', 'q': '⠟', 'r': '⠗', 's': '⠎', 't': '⠞',
+            'u': '⠥', 'v': '⠧', 'w': '⠺', 'x': '⠭', 'y': '⠽',
+            'z': '⠵', ' ': ' ', '\n': '\n'
+        };
+
+        function convertToBraille(text) {
+            return text.toLowerCase().split('').map(char => brailleMap[char] || '').join('');
+        }
+
+        // Speech Recognition
+        startBtn.addEventListener('click', () => {
+            recognition.lang = languageSelect.value;
+            recognition.start();
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            pauseBtn.disabled = false;
+        });
+
+        stopBtn.addEventListener('click', () => {
+            recognition.stop();
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            pauseBtn.disabled = true;
+            resumeBtn.disabled = true;
+        });
+
+        pauseBtn.addEventListener('click', () => {
+            recognition.stop();
+            pauseBtn.disabled = true;
+            resumeBtn.disabled = false;
+        });
+
+        resumeBtn.addEventListener('click', () => {
+            recognition.start();
+            pauseBtn.disabled = false;
+            resumeBtn.disabled = true;
+        });
+
+        recognition.addEventListener('result', (event) => {
+            const transcript = event.results[0][0].transcript;
+            resultText.value += transcript + '\n';
+            resultText.scrollTop = resultText.scrollHeight; // Auto-scroll
+            updateCount();
+        });
+
+        recognition.addEventListener('end', () => {
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            pauseBtn.disabled = true;
+            resumeBtn.disabled = true;
+        });
+
+        recognition.addEventListener('error', (event) => {
+            alert("Error occurred: " + event.error);
+        });
+
+        // Language Selection
+        languageSelect.addEventListener('change', () => {
+            recognition.lang = languageSelect.value;
+        });
+
+        // Print
+        printBtn.addEventListener('click', () => {
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write('<html><head><title>Print</title></head><body>');
+            printWindow.document.write('<h1>Transcribed Text:</h1>');
+            printWindow.document.write('<pre>' + resultText.value + '</pre>');
+            printWindow.document.write('<h1>Braille Output:</h1>');
+            printWindow.document.write('<pre>' + brailleOutput.value + '</pre>');
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            printWindow.print();
+        });
+
+        // Clear Text
+        clearBtn.addEventListener('click', () => {
+            resultText.value = '';
+            brailleOutput.value = '';
+            updateCount();
+        });
+
+        // Convert to Braille
+        convertToBrailleBtn.addEventListener('click', () => {
+            const text = resultText.value;
+            brailleOutput.value = convertToBraille(text);
+        });
+
+        // Copy to Clipboard
+        copyTextBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(resultText.value)
+                .then(() => alert('Text copied to clipboard!'))
+                .catch(() => alert('Failed to copy text.'));
+        });
+
+        copyBrailleBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(brailleOutput.value)
+                .then(() => alert('Braille copied to clipboard!'))
+                .catch(() => alert('Failed to copy Braille.'));
+        });
+
+        // Download as Text File
+        function downloadFile(content, filename) {
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        downloadTextBtn.addEventListener('click', () => {
+            downloadFile(resultText.value, 'transcription.txt');
+        });
+
+        downloadBrailleBtn.addEventListener('click', () => {
+            downloadFile(brailleOutput.value, 'braille.txt');
+        });
+
+        // Text-to-Speech
+        listenBtn.addEventListener('click', () => {
+            const synth = window.speechSynthesis;
+            const utterance = new SpeechSynthesisUtterance(resultText.value);
+            utterance.lang = languageSelect.value;
+            synth.speak(utterance);
+        });
+
+        // Dark Mode
+        darkModeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+        });
+
+        // Word/Character Count
+        function updateCount() {
+            const text = resultText.value;
+            const wordCountValue = text.split(/\s+/).filter(word => word.length > 0).length;
+            const charCountValue = text.length;
+
+            wordCount.textContent = wordCountValue;
+            charCount.textContent = charCountValue;
+        }
+
+        resultText.addEventListener('input', updateCount);
+
+        // Undo/Redo
+        let textHistory = [];
+        let currentIndex = -1;
+
+        resultText.addEventListener('input', () => {
+            textHistory = textHistory.slice(0, currentIndex + 1);
+            textHistory.push(resultText.value);
+            currentIndex++;
+        });
+
+        undoBtn.addEventListener('click', () => {
+            if (currentIndex > 0) {
+                currentIndex--;
+                resultText.value = textHistory[currentIndex];
+                updateCount();
+            }
+        });
+
+        redoBtn.addEventListener('click', () => {
+            if (currentIndex < textHistory.length - 1) {
+                currentIndex++;
+                resultText.value = textHistory[currentIndex];
+                updateCount();
+            }
+        });
+
+        // Audio Visualization
+        const canvas = document.getElementById('audio-visualizer');
+        const ctx = canvas.getContext('2d');
+
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                const audioContext = new AudioContext();
+                const analyser = audioContext.createAnalyser();
+                const source = audioContext.createMediaStreamSource(stream);
+                source.connect(analyser);
+                analyser.fftSize = 256;
+
+                const bufferLength = analyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+
+                function draw() {
+                    requestAnimationFrame(draw);
+                    analyser.getByteFrequencyData(dataArray);
+
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    const barWidth = (canvas.width / bufferLength) * 2.5;
+                    let x = 0;
+
+                    for (let i = 0; i < bufferLength; i++) {
+                        const barHeight = dataArray[i] / 2;
+                        ctx.fillStyle = `rgb(${barHeight + 100}, 50, 50)`;
+                        ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+                        x += barWidth + 1;
+                    }
+                }
+
+                draw();
+            });
+    </script>
+</body>
+</html>
